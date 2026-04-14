@@ -216,6 +216,7 @@ sb.auth.onAuthStateChange((event, session) => {
   }
 
   async function doLogin() {
+    localStorage.removeItem('supabase.auth.token');
     const email = document.getElementById('login-email').value.trim();
     const pass  = document.getElementById('login-pass').value;
     if (!email || !pass) { setMsg('Preencha email e senha.'); return; }
