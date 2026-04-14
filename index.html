@@ -186,12 +186,20 @@
 const SUPABASE_URL  = 'https://gvtqanrlazvurrfgrjfp.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd2dHFhbnJsYXp2dXJyZmdyamZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxMTExMTcsImV4cCI6MjA5MTY4NzExN30.PkRGx_rl58-Lsxyj4Sa1gr6T6Skfate2UYXzqOENxqQ';
 
-  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
-  // Redirecionar se já está logado
-  sb.auth.getSession().then(({ data }) => {
-    if (data.session) location.href = 'app.html';
-  });
+// Redirecionar se já está logado
+sb.auth.getSession().then(({ data }) => {
+  if (data.session) location.href = 'app.html';
+});
+
+// Limpar sessão inválida automaticamente
+sb.auth.onAuthStateChange((event, session) => {
+  if (event === 'TOKEN_REFRESHED') return;
+  if (event === 'SIGNED_OUT') {
+    localStorage.clear();
+  }
+});
 
   function showTab(tab) {
     document.getElementById('form-login').style.display    = tab === 'login'    ? '' : 'none';
