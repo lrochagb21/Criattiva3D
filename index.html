@@ -8,58 +8,67 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script
 
 <script>
+(function() {
+'use strict';
+
 // ========== AUTH STATE ==========
-const AUTH_KEY = 'criattiva3d_auth';
-let _currentUser = null;
+var AUTH_KEY = 'criattiva3d_auth';
+var _currentUser = null;
+var _sb = null;
+var _selectedPlan = 'mensal';
 
 // Supabase init
-const SUPABASE_URL = 'https://gvtqanrlazvurrfgrjfp.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd2dHFhbnJsYXp2dXJyZmdyamZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxMTExMTcsImV4cCI6MjA5MTY4NzExN30.PkRGx_rl58-Lsxyj4Sa1gr6T6Skfate2UYXzqOENxqQ';
-let _sb = null;
 try {
   if (window.supabase && window.supabase.createClient) {
-    _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    _sb = window.supabase.createClient(
+      'https://gvtqanrlazvurrfgrjfp.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd2dHFhbnJsYXp2dXJyZmdyamZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxMTExMTcsImV4cCI6MjA5MTY4NzExN30.PkRGx_rl58-Lsxyj4Sa1gr6T6Skfate2UYXzqOENxqQ'
+    );
   }
 } catch(e) { console.warn('Supabase init error', e); }
 
 // ========== ON LOAD ==========
-document.addEventListener('DOMContentLoaded', async function() {
-  // Check active Supabase session first
+document.addEventListener('DOMContentLoaded', function() {
   if (_sb) {
-    const { data: { session } } = await _sb.auth.getSession();
-    if (session) {
-      const { data: perfil } = await _sb.from('perfis').select('*').eq('id', session.user.id).single();
-      _currentUser = {
-        id: session.user.id,
-        name: perfil?.nome || session.user.email.split('@')[0],
-        email: session.user.email,
-        plan: perfil?.plano || 'trial',
-        trialExpires: perfil?.trial_expira_em || new Date(Date.now() + 7*86400000).toISOString(),
-        assinaturaAtiva: perfil?.assinatura_ativa || false
-      };
-      saveAuthLocal(_currentUser);
-      enterApp();
-      return;
-    }
+    _sb.auth.getSession().then(function(res) {
+      var session = res.data && res.data.session;
+      if (session) {
+        _sb.from('perfis').select('*').eq('id', session.user.id).single().then(function(res2) {
+          var perfil = res2.data;
+          _currentUser = {
+            id: session.user.id,
+            name: perfil ? perfil.nome : session.user.email.split('@')[0],
+            email: session.user.email,
+            plan: perfil ? perfil.plano : 'trial',
+            trialExpires: perfil ? perfil.trial_expira_em : new Date(Date.now() + 7*86400000).toISOString(),
+            assinaturaAtiva: perfil ? perfil.assinatura_ativa : false
+          };
+          saveAuthLocal(_currentUser);
+          enterApp();
+        });
+        return;
+      }
+      var saved = getAuthLocal();
+      if (saved) { _currentUser = saved; enterApp(); }
+    });
+  } else {
+    var saved = getAuthLocal();
+    if (saved) { _currentUser = saved; enterApp(); }
   }
-  // Fallback to localStorage
-  const saved = getAuthLocal();
-  if (saved) {
-    _currentUser = saved;
-    enterApp();
-  }
+
+  // PIX modal backdrop
+  var pm = document.getElementById('pix-modal');
+  if (pm) pm.addEventListener('click', function(e) { if (e.target === this) closePixModal(); });
 });
 
 function getAuthLocal() {
   try {
-    const data = JSON.parse(localStorage.getItem(AUTH_KEY));
+    var data = JSON.parse(localStorage.getItem(AUTH_KEY));
     if (!data || !data.email) return null;
-    // Check trial
     if (data.plan === 'trial') {
-      const expires = new Date(data.trialExpires);
-      if (new Date() > expires) {
+      if (new Date() > new Date(data.trialExpires)) {
         localStorage.removeItem(AUTH_KEY);
-        return null; // trial expired
+        return null;
       }
     }
     return data;
@@ -67,228 +76,185 @@ function getAuthLocal() {
 }
 
 function saveAuthLocal(user) {
-  localStorage.setItem(AUTH_KEY, JSON.stringify(user));
+  try { localStorage.setItem(AUTH_KEY, JSON.stringify(user)); } catch(e) {}
 }
 
 // ========== TAB SWITCHING ==========
-function switchAuthTab(tab) {
-  document.querySelectorAll('.auth-tab').forEach((t,i) => {
+window.switchAuthTab = function(tab) {
+  document.querySelectorAll('.auth-tab').forEach(function(t, i) {
     t.classList.toggle('active', (i===0 && tab==='login') || (i===1 && tab==='signup'));
   });
   document.getElementById('auth-login').style.display = tab==='login' ? 'flex' : 'none';
   document.getElementById('auth-signup').style.display = tab==='signup' ? 'flex' : 'none';
-  document.getElementById('auth-forgot').style.display = 'none';
-  document.getElementById('auth-verify').style.display = 'none';
-}
+  var f = document.getElementById('auth-forgot');
+  var v = document.getElementById('auth-verify');
+  if (f) f.style.display = 'none';
+  if (v) v.style.display = 'none';
+};
 
-function showForgot() {
+window.showForgot = function() {
   document.getElementById('auth-login').style.display = 'none';
-  document.getElementById('auth-forgot').style.display = 'flex';
-  document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
-}
+  var fg = document.getElementById('auth-forgot');
+  if (fg) fg.style.display = 'flex';
+  document.querySelectorAll('.auth-tab').forEach(function(t) { t.classList.remove('active'); });
+};
 
 // ========== PASSWORD TOGGLE ==========
-function togglePw(id, btn) {
-  const inp = document.getElementById(id);
+window.togglePw = function(id, btn) {
+  var inp = document.getElementById(id);
   inp.type = inp.type === 'password' ? 'text' : 'password';
   btn.textContent = inp.type === 'password' ? '👁' : '🙈';
-}
+};
 
 // ========== PASSWORD STRENGTH ==========
-function checkStrength(val) {
-  let score = 0;
+window.checkStrength = function(val) {
+  var score = 0;
   if (val.length >= 8) score++;
   if (/[A-Z]/.test(val)) score++;
   if (/[0-9]/.test(val)) score++;
   if (/[^A-Za-z0-9]/.test(val)) score++;
-  const fill = document.getElementById('strength-fill');
-  const colors = ['#ff3d5a','#ff6b35','#fbbf24','#00e5a0'];
+  var fill = document.getElementById('strength-fill');
+  if (!fill) return;
+  var colors = ['#ff3d5a','#ff6b35','#fbbf24','#00e5a0'];
   fill.style.width = (score * 25) + '%';
-  fill.style.background = colors[score-1] || 'var(--bg4)';
-}
+  fill.style.background = colors[score-1] || '#21273a';
+};
 
 // ========== VALIDATION ==========
 function validateEmail(email) {
-  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!re.test(email)) return false;
-  // Block disposable domains
-  const blocked = ['mailinator.com','tempmail.com','guerrillamail.com','yopmail.com','throwaway.email','10minutemail.com','trashmail.com'];
-  const domain = email.split('@')[1].toLowerCase();
-  return !blocked.includes(domain);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return false;
+  var blocked = ['mailinator.com','tempmail.com','guerrillamail.com','yopmail.com','throwaway.email','10minutemail.com','trashmail.com'];
+  var domain = email.split('@')[1].toLowerCase();
+  return blocked.indexOf(domain) === -1;
 }
 
 function showErr(id, msg) {
-  const el = document.getElementById(id);
+  var el = document.getElementById(id);
+  if (!el) return;
   el.textContent = msg;
   el.classList.add('show');
-  setTimeout(() => el.classList.remove('show'), 5000);
+  setTimeout(function() { el.classList.remove('show'); }, 5000);
 }
 
-// ========== RATE LIMITING ==========
 function checkRateLimit(key, max, windowMs) {
-  const now = Date.now();
-  const stored = JSON.parse(localStorage.getItem('rl_' + key) || '[]');
-  const recent = stored.filter(t => now - t < windowMs);
+  var now = Date.now();
+  var stored = JSON.parse(localStorage.getItem('rl_' + key) || '[]');
+  var recent = stored.filter(function(t) { return now - t < windowMs; });
   if (recent.length >= max) return false;
   recent.push(now);
   localStorage.setItem('rl_' + key, JSON.stringify(recent));
   return true;
 }
 
-// ========== DEVICE FINGERPRINT ==========
 function getFingerprint() {
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-  ctx.textBaseline = 'top';
-  ctx.font = '14px Arial';
-  ctx.fillText('Criattiva3D', 2, 2);
-  const nav = navigator;
-  const raw = [
-    canvas.toDataURL(),
-    nav.language, nav.platform,
-    screen.width + 'x' + screen.height,
-    Intl.DateTimeFormat().resolvedOptions().timeZone,
-    nav.hardwareConcurrency || 0
-  ].join('|');
-  let hash = 0;
-  for (let i = 0; i < raw.length; i++) {
-    hash = ((hash << 5) - hash) + raw.charCodeAt(i);
-    hash |= 0;
-  }
-  return Math.abs(hash).toString(36);
+  try {
+    var canvas = document.createElement('canvas');
+    var ctx = canvas.getContext('2d');
+    ctx.textBaseline = 'top'; ctx.font = '14px Arial';
+    ctx.fillText('Criattiva3D', 2, 2);
+    var raw = [canvas.toDataURL(), navigator.language, screen.width+'x'+screen.height].join('|');
+    var hash = 0;
+    for (var i = 0; i < raw.length; i++) { hash = ((hash << 5) - hash) + raw.charCodeAt(i); hash |= 0; }
+    return Math.abs(hash).toString(36);
+  } catch(e) { return 'unknown'; }
 }
 
 // ========== SIGNUP ==========
-async function doSignup() {
-  const name  = document.getElementById('signup-name').value.trim();
-  const email = document.getElementById('signup-email').value.trim().toLowerCase();
-  const pass  = document.getElementById('signup-pass').value;
-  const pass2 = document.getElementById('signup-pass2').value;
-  const terms = document.getElementById('signup-terms').checked;
+window.doSignup = function() {
+  var name  = document.getElementById('signup-name').value.trim();
+  var email = document.getElementById('signup-email').value.trim().toLowerCase();
+  var pass  = document.getElementById('signup-pass').value;
+  var pass2 = document.getElementById('signup-pass2').value;
+  var terms = document.getElementById('signup-terms').checked;
 
   if (!name) return showErr('signup-err', 'Informe seu nome completo.');
   if (!validateEmail(email)) return showErr('signup-err', 'E-mail inválido ou não permitido.');
   if (pass.length < 8) return showErr('signup-err', 'A senha deve ter pelo menos 8 caracteres.');
   if (pass !== pass2) return showErr('signup-err', 'As senhas não coincidem.');
   if (!terms) return showErr('signup-err', 'Você precisa aceitar os Termos de Uso.');
+  if (!checkRateLimit('signup', 3, 3600000)) return showErr('signup-err', 'Muitas tentativas. Aguarde uma hora.');
 
-  // Rate limit: max 3 signups per hour per device
-  if (!checkRateLimit('signup', 3, 3600000)) {
-    return showErr('signup-err', 'Muitas tentativas. Aguarde uma hora.');
-  }
+  var fp = getFingerprint();
+  var usedEmails = JSON.parse(localStorage.getItem('used_emails') || '[]');
+  if (usedEmails.indexOf(email) !== -1) return showErr('signup-err', 'Este e-mail já foi usado para um trial.');
 
-  // Check if email already used for trial
-  const fp = getFingerprint();
-  const usedEmails = JSON.parse(localStorage.getItem('used_emails') || '[]');
-  if (usedEmails.includes(email)) {
-    return showErr('signup-err', 'Este e-mail já foi utilizado para um período de trial.');
-  }
-
-  // Check device fingerprint (max 2 trials per device)
-  const usedFps = JSON.parse(localStorage.getItem('used_fps') || '[]');
-  if (usedFps.filter(f => f === fp).length >= 2) {
-    return showErr('signup-err', 'Limite de contas de trial atingido neste dispositivo.');
-  }
-
-  // Save email and fingerprint
-  usedEmails.push(email);
-  localStorage.setItem('used_emails', JSON.stringify(usedEmails));
-  usedFps.push(fp);
-  localStorage.setItem('used_fps', JSON.stringify(usedFps));
-
-  // Disable signup button to prevent double-click
-  const btn = document.querySelector('#auth-signup .auth-btn');
+  var btn = document.querySelector('#auth-signup .auth-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'Criando conta...'; }
 
-  const trialExpires = new Date();
+  var trialExpires = new Date();
   trialExpires.setDate(trialExpires.getDate() + 7);
 
-  if (_sb) {
-    // Real Supabase signup
-    const { data, error } = await _sb.auth.signUp({
-      email,
-      password: pass,
-      options: { data: { nome: name, fingerprint: fp } }
-    });
-    if (error) {
-      if (btn) { btn.disabled = false; btn.textContent = 'Criar conta grátis'; }
-      const msg = error.message.includes('already registered')
-        ? 'Este e-mail já está cadastrado. Faça login.'
-        : error.message;
-      return showErr('signup-err', msg);
-    }
-    const user = {
-      id: data.user?.id,
-      name, email,
-      plan: 'trial',
-      trialExpires: trialExpires.toISOString(),
-      createdAt: new Date().toISOString(),
-      fingerprint: fp,
-      termsAcceptedAt: new Date().toISOString()
-    };
+  function onSuccess(userId) {
+    usedEmails.push(email);
+    localStorage.setItem('used_emails', JSON.stringify(usedEmails));
+    var user = { id: userId, name: name, email: email, plan: 'trial',
+      trialExpires: trialExpires.toISOString(), createdAt: new Date().toISOString(),
+      fingerprint: fp, termsAcceptedAt: new Date().toISOString() };
     saveAuthLocal(user);
     _currentUser = user;
-    document.getElementById('verify-email-display').textContent = email;
-    document.querySelectorAll('.auth-form').forEach(f => f.style.display = 'none');
-    document.getElementById('auth-verify').style.display = 'flex';
-    if (data.session) setTimeout(() => enterApp(), 1500);
-  } else {
-    // Fallback offline
-    const user = {
-      name, email,
-      plan: 'trial',
-      trialExpires: trialExpires.toISOString(),
-      createdAt: new Date().toISOString(),
-      fingerprint: fp,
-      termsAcceptedAt: new Date().toISOString()
-    };
-    saveAuthLocal(user);
-    _currentUser = user;
-    document.getElementById('verify-email-display').textContent = email;
-    document.querySelectorAll('.auth-form').forEach(f => f.style.display = 'none');
-    document.getElementById('auth-verify').style.display = 'flex';
-    setTimeout(() => enterApp(), 1500);
+    var ve = document.getElementById('verify-email-display');
+    if (ve) ve.textContent = email;
+    document.querySelectorAll('.auth-form').forEach(function(f) { f.style.display = 'none'; });
+    var av = document.getElementById('auth-verify');
+    if (av) av.style.display = 'flex';
+    if (btn) { btn.disabled = false; btn.textContent = 'Criar conta grátis'; }
+    setTimeout(function() { enterApp(); }, 1500);
   }
-}
+
+  if (_sb) {
+    _sb.auth.signUp({ email: email, password: pass, options: { data: { nome: name } } })
+      .then(function(res) {
+        if (res.error) {
+          if (btn) { btn.disabled = false; btn.textContent = 'Criar conta grátis'; }
+          var msg = res.error.message.indexOf('already registered') !== -1
+            ? 'E-mail já cadastrado. Faça login.' : res.error.message;
+          return showErr('signup-err', msg);
+        }
+        onSuccess(res.data.user ? res.data.user.id : null);
+      }).catch(function(e) {
+        if (btn) { btn.disabled = false; btn.textContent = 'Criar conta grátis'; }
+        showErr('signup-err', 'Erro ao criar conta. Tente novamente.');
+      });
+  } else {
+    onSuccess(null);
+  }
+};
 
 // ========== LOGIN ==========
-async function doLogin() {
-  const email = document.getElementById('login-email').value.trim().toLowerCase();
-  const pass  = document.getElementById('login-pass').value;
-
+window.doLogin = function() {
+  var email = document.getElementById('login-email').value.trim().toLowerCase();
+  var pass  = document.getElementById('login-pass').value;
   if (!email || !pass) return showErr('login-err', 'Preencha e-mail e senha.');
+  if (!checkRateLimit('login_' + email, 5, 900000)) return showErr('login-err', 'Muitas tentativas. Aguarde 15 minutos.');
 
-  // Rate limit: max 5 attempts per 15 min
-  if (!checkRateLimit('login_' + email, 5, 900000)) {
-    return showErr('login-err', 'Muitas tentativas. Aguarde 15 minutos.');
-  }
-
-  const btn = document.querySelector('#auth-login .auth-btn');
+  var btn = document.querySelector('#auth-login .auth-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'Entrando...'; }
 
   if (_sb) {
-    const { data, error } = await _sb.auth.signInWithPassword({ email, password: pass });
-    if (error) {
-      if (btn) { btn.disabled = false; btn.textContent = 'Entrar'; }
-      return showErr('login-err', 'E-mail ou senha incorretos.');
-    }
-    // Load profile from DB
-    const { data: perfil } = await _sb.from('perfis').select('*').eq('id', data.user.id).single();
-    const user = {
-      id: data.user.id,
-      name: perfil?.nome || email.split('@')[0],
-      email,
-      plan: perfil?.plano || 'trial',
-      trialExpires: perfil?.trial_expira_em || new Date(Date.now() + 7*86400000).toISOString(),
-      assinaturaAtiva: perfil?.assinatura_ativa || false,
-      assinaturaExpira: perfil?.assinatura_expira || null
-    };
-    saveAuthLocal(user);
-    _currentUser = user;
-    if (btn) { btn.disabled = false; btn.textContent = 'Entrar'; }
-    enterApp();
+    _sb.auth.signInWithPassword({ email: email, password: pass })
+      .then(function(res) {
+        if (res.error) {
+          if (btn) { btn.disabled = false; btn.textContent = 'Entrar'; }
+          return showErr('login-err', 'E-mail ou senha incorretos.');
+        }
+        return _sb.from('perfis').select('*').eq('id', res.data.user.id).single()
+          .then(function(res2) {
+            var perfil = res2.data;
+            _currentUser = { id: res.data.user.id,
+              name: perfil ? perfil.nome : email.split('@')[0], email: email,
+              plan: perfil ? perfil.plano : 'trial',
+              trialExpires: perfil ? perfil.trial_expira_em : new Date(Date.now()+7*86400000).toISOString(),
+              assinaturaAtiva: perfil ? perfil.assinatura_ativa : false };
+            saveAuthLocal(_currentUser);
+            if (btn) { btn.disabled = false; btn.textContent = 'Entrar'; }
+            enterApp();
+          });
+      }).catch(function(e) {
+        if (btn) { btn.disabled = false; btn.textContent = 'Entrar'; }
+        showErr('login-err', 'Erro ao entrar. Tente novamente.');
+      });
   } else {
-    const saved = getAuthLocal();
+    var saved = getAuthLocal();
     if (saved && saved.email === email) {
       _currentUser = saved;
       if (btn) { btn.disabled = false; btn.textContent = 'Entrar'; }
@@ -298,110 +264,95 @@ async function doLogin() {
       showErr('login-err', 'E-mail ou senha incorretos.');
     }
   }
-}
+};
 
 // ========== FORGOT PASSWORD ==========
-async function doForgot() {
-  const email = document.getElementById('forgot-email').value.trim();
+window.doForgot = function() {
+  var email = document.getElementById('forgot-email').value.trim();
   if (!validateEmail(email)) return showErr('forgot-err', 'Informe um e-mail válido.');
-  if (_sb) {
-    await _sb.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + '/app.html'
-    });
-  }
+  if (_sb) { _sb.auth.resetPasswordForEmail(email); }
   showToast('Link enviado! Verifique seu e-mail.', 'success');
-  switchAuthTab('login');
-}
+  window.switchAuthTab('login');
+};
 
-function resendVerification() {
-  showToast('E-mail reenviado!', 'success');
-}
+window.resendVerification = function() { showToast('E-mail reenviado!', 'success'); };
 
 // ========== ENTER APP ==========
 function enterApp() {
-  if (_currentUser) {
-    const el = document.getElementById('user-info');
-    if (el) el.textContent = _currentUser.email;
-  }
-  document.getElementById('auth-screen').classList.remove('active');
+  var as = document.getElementById('auth-screen');
+  if (as) as.classList.remove('active');
+  var ui = document.getElementById('user-info');
+  if (ui && _currentUser) ui.textContent = _currentUser.email;
   showTrialBanner();
 }
 
-async function logout() {
-  if (_sb) await _sb.auth.signOut();
+window.logout = function() {
+  if (_sb) _sb.auth.signOut();
   localStorage.removeItem(AUTH_KEY);
   _currentUser = null;
-  document.getElementById('auth-screen').classList.add('active');
-  document.getElementById('trial-banner').classList.remove('show');
-  switchAuthTab('login');
-}
+  var as = document.getElementById('auth-screen');
+  if (as) as.classList.add('active');
+  var tb = document.getElementById('trial-banner');
+  if (tb) tb.classList.remove('show');
+  window.switchAuthTab('login');
+};
 
 // ========== TRIAL BANNER ==========
 function showTrialBanner() {
   if (!_currentUser) return;
   if (_currentUser.plan === 'trial') {
-    const expires = new Date(_currentUser.trialExpires);
-    const now = new Date();
-    const daysLeft = Math.ceil((expires - now) / (1000 * 60 * 60 * 24));
-    if (daysLeft <= 0) { logout(); return; }
-    document.getElementById('trial-days-left').textContent = daysLeft;
-    const txt = daysLeft === 1
-      ? '⏱ Seu trial expira <b>hoje!</b> Não perca acesso.'
-      : `⏱ Seu trial expira em <b>${daysLeft} dias</b>`;
-    document.getElementById('trial-text').innerHTML = txt;
-    document.getElementById('trial-banner').classList.add('show');
-
-    // Check expiration every minute
-    setInterval(() => {
-      const d = Math.ceil((new Date(_currentUser.trialExpires) - new Date()) / 86400000);
-      if (d <= 0) logout();
+    var expires = new Date(_currentUser.trialExpires);
+    var daysLeft = Math.ceil((expires - new Date()) / 86400000);
+    if (daysLeft <= 0) { window.logout(); return; }
+    var el = document.getElementById('trial-days-left');
+    if (el) el.textContent = daysLeft;
+    var txt = daysLeft === 1 ? '⏱ Seu trial expira <b>hoje!</b>' : '⏱ Seu trial expira em <b>' + daysLeft + ' dias</b>';
+    var te = document.getElementById('trial-text');
+    if (te) te.innerHTML = txt;
+    var tb = document.getElementById('trial-banner');
+    if (tb) tb.classList.add('show');
+    setInterval(function() {
+      var d = Math.ceil((new Date(_currentUser.trialExpires) - new Date()) / 86400000);
+      if (d <= 0) window.logout();
     }, 60000);
   }
 }
 
 // ========== PIX MODAL ==========
-let _selectedPlan = 'mensal';
-const PIX_KEYS = {
-  mensal:      { price: 'R$ 14,99',  total: 'R$ 14,99',  key: '66.045.660/0001-05' },
-  trimestral:  { price: 'R$ 13,49',  total: 'R$ 40,47',  key: '66.045.660/0001-05' },
-  semestral:   { price: 'R$ 12,29',  total: 'R$ 73,75',  key: '66.045.660/0001-05' },
-  anual:       { price: 'R$ 11,24',  total: 'R$ 134,91', key: '66.045.660/0001-05' }
+var PIX_KEYS = {
+  mensal:     { price: 'R$ 14,99',  total: 'R$ 14,99',  key: '66.045.660/0001-05' },
+  trimestral: { price: 'R$ 13,49',  total: 'R$ 40,47',  key: '66.045.660/0001-05' },
+  semestral:  { price: 'R$ 12,29',  total: 'R$ 73,75',  key: '66.045.660/0001-05' },
+  anual:      { price: 'R$ 11,24',  total: 'R$ 134,91', key: '66.045.660/0001-05' }
 };
 
-function openPixModal() {
-  document.getElementById('pix-modal').classList.add('open');
-}
-function closePixModal() {
-  document.getElementById('pix-modal').classList.remove('open');
-}
-function selectPlan(plan, el) {
+window.openPixModal  = function() { document.getElementById('pix-modal').classList.add('open'); };
+window.closePixModal = function() { document.getElementById('pix-modal').classList.remove('open'); };
+
+window.selectPlan = function(plan, el) {
   _selectedPlan = plan;
-  document.querySelectorAll('.pix-plan').forEach(p => p.classList.remove('selected'));
+  document.querySelectorAll('.pix-plan').forEach(function(p) { p.classList.remove('selected'); });
   el.classList.add('selected');
-  document.getElementById('pix-key-display').textContent = PIX_KEYS[plan].key;
-  const tot = document.getElementById('pix-total-display');
-  if (tot) tot.textContent = PIX_KEYS[plan].total;
-}
-function copyPixKey() {
-  const key = PIX_KEYS[_selectedPlan].key;
-  navigator.clipboard.writeText(key).then(() => {
-    showToast('Chave PIX copiada!', 'success');
-  }).catch(() => {
-    // Fallback
-    const el = document.getElementById('pix-key-display');
-    const range = document.createRange();
-    range.selectNode(el);
-    window.getSelection().removeAllRanges();
-    window.getSelection().addRange(range);
+  var kd = document.getElementById('pix-key-display');
+  if (kd) kd.textContent = PIX_KEYS[plan].key;
+  var td = document.getElementById('pix-total-display');
+  if (td) td.textContent = PIX_KEYS[plan].total;
+};
+
+window.copyPixKey = function() {
+  var key = PIX_KEYS[_selectedPlan].key;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(key).then(function() { showToast('Chave PIX copiada!', 'success'); });
+  } else {
+    var el = document.getElementById('pix-key-display');
+    var range = document.createRange(); range.selectNode(el);
+    window.getSelection().removeAllRanges(); window.getSelection().addRange(range);
     document.execCommand('copy');
     showToast('Chave PIX copiada!', 'success');
-  });
-}
+  }
+};
 
-// Close PIX modal on backdrop click
-document.getElementById('pix-modal').addEventListener('click', function(e) {
-  if (e.target === this) closePixModal();
-});
+})(); // end IIFE
 </script>
 
 <script>
@@ -1733,7 +1684,6 @@ input[type="color"] { padding: 4px 6px; height: 36px; cursor: pointer; }
 <div id="toast"></div>
 
 <script>
-try {
 // ===================== STORAGE =====================
 const KEYS = ['config','orcamentos','anuncios','vendas','estoque','historico'];
 let _mem = {};
