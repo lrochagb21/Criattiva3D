@@ -765,6 +765,13 @@ input[type="color"] { padding: 4px 6px; height: 36px; cursor: pointer; }
 @media (max-width: 480px) {
   .page-title h2 { font-size: 18px; }
   .stat-value { font-size: 18px; }
+  .auth-box { padding: 24px 20px; width: 100%; border-radius: 16px; }
+  .auth-title { font-size: 17px; }
+  .auth-input { font-size: 15px; padding: 10px 12px; }
+  .auth-btn { font-size: 15px; padding: 12px; }
+}
+@media (max-width: 360px) {
+  .auth-box { padding: 20px 16px; }
 }
 
 /* ==========================================
@@ -773,13 +780,14 @@ input[type="color"] { padding: 4px 6px; height: 36px; cursor: pointer; }
 #auth-screen {
   display: none; position: fixed; inset: 0; z-index: 500;
   background: var(--bg); align-items: center; justify-content: center;
-  flex-direction: column;
+  flex-direction: column; padding: 16px;
 }
 #auth-screen.active { display: flex; }
 .auth-box {
   background: var(--bg2); border: 1px solid var(--border);
-  border-radius: 20px; padding: 36px 40px; width: 420px;
-  max-width: 95vw; max-height: 95vh; overflow-y: auto;
+  border-radius: 20px; padding: 32px 36px; width: 420px;
+  max-width: 92vw; max-height: 92vh; overflow-y: auto;
+  box-sizing: border-box;
 }
 .auth-logo { text-align: center; margin-bottom: 24px; }
 .auth-logo img { width: 120px; height: auto; }
@@ -788,7 +796,7 @@ input[type="color"] { padding: 4px 6px; height: 36px; cursor: pointer; }
 .auth-tabs { display:flex; background: var(--bg3); border-radius:10px; padding:3px; margin-bottom:20px; border:1px solid var(--border); }
 .auth-tab { flex:1; padding:7px; border-radius:8px; cursor:pointer; font-size:13px; font-weight:500; color:var(--muted); text-align:center; transition:all .15s; }
 .auth-tab.active { background: var(--bg); color: var(--accent); }
-.auth-form { display:flex; flex-direction:column; gap:14px; }
+.auth-form { display:flex; flex-direction:column; gap:14px; width:100%; box-sizing:border-box; }
 .auth-label { font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; margin-bottom:4px; display:block; }
 .auth-input {
   background: var(--bg3); border:1px solid var(--border); border-radius:8px;
@@ -808,7 +816,7 @@ input[type="color"] { padding: 4px 6px; height: 36px; cursor: pointer; }
 .auth-btn:hover { background:#00ffb3; }
 .auth-btn:disabled { background:var(--bg4); color:var(--muted); cursor:not-allowed; }
 .auth-divider { text-align:center; font-size:12px; color:var(--muted); margin:4px 0; }
-.auth-terms { font-size:11px; color:var(--muted); line-height:1.5; }
+.auth-terms { font-size:11px; color:var(--muted); line-height:1.5; flex:1; min-width:0; word-wrap:break-word; overflow-wrap:break-word; }
 .auth-terms a { color:var(--accent2); text-decoration:none; }
 .auth-err { background:rgba(255,61,90,.12); border:1px solid var(--danger); border-radius:8px; padding:10px 14px; font-size:13px; color:var(--danger); display:none; }
 .auth-err.show { display:block; }
@@ -931,7 +939,7 @@ input[type="color"] { padding: 4px 6px; height: 36px; cursor: pointer; }
         <label class="auth-label">Confirmar senha</label>
         <input id="signup-pass2" class="auth-input" type="password" placeholder="Repita a senha" autocomplete="new-password">
       </div>
-      <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
+      <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;width:100%;box-sizing:border-box;">
         <input type="checkbox" id="signup-terms" style="margin-top:2px;flex-shrink:0;">
         <span class="auth-terms">Li e aceito os <a href="#">Termos de Uso</a> e a <a href="#">Política de Privacidade</a>. Entendo que meus dados serão usados conforme a LGPD.</span>
       </label>
