@@ -284,6 +284,8 @@ function enterApp() {
   var ui = document.getElementById('user-info');
   if (ui && _currentUser) ui.textContent = _currentUser.email;
   showTrialBanner();
+  // Trigger main app initialization
+  if (typeof window._initApp === 'function') window._initApp();
 }
 
 window.logout = function() {
@@ -3662,7 +3664,10 @@ async function checkAuth() {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) {
     // Só redireciona se não estiver já no index
-    if (!location.href.includes('index.html')) location.href = 'index.html';
+    // Auth handled by IIFE auth system - just show auth screen
+    var as = document.getElementById('auth-screen');
+    if (as) as.classList.add('active');
+    return;
     return;
   }
   SESSION = session;
@@ -3862,7 +3867,8 @@ async function sbSaveConfig(cfg) {
 }
 
 // ── INICIAR APP ──────────────────────────────────────────────
-checkAuth().then(() => init());
+// App init is triggered by the auth IIFE after successful login
+window._initApp = function() { checkAuth().then(() => init()); };
 
 
 
