@@ -2172,7 +2172,19 @@ function saveAll(key, data) {
     if (key === 'orcamentos') data.forEach(o => sbSaveOrcamento(o));
     if (key === 'vendas')     data.forEach(v => sbSaveVenda(v));
     if (key === 'estoque')    data.forEach(e => sbSaveEstoque(e));
+    if (key === 'anuncios')   data.forEach(a => sbSaveAnuncio(a));
     if (key === 'config')     sbSaveConfig(data);
+  } else {
+    // TENANT_ID ainda não carregou — tenta de novo em 2s
+    setTimeout(function() {
+      if (TENANT_ID) {
+        if (key === 'orcamentos') data.forEach(o => sbSaveOrcamento(o));
+        if (key === 'vendas')     data.forEach(v => sbSaveVenda(v));
+        if (key === 'estoque')    data.forEach(e => sbSaveEstoque(e));
+        if (key === 'anuncios')   data.forEach(a => sbSaveAnuncio(a));
+        if (key === 'config')     sbSaveConfig(data);
+      }
+    }, 2000);
   }
 }
 
@@ -4005,10 +4017,11 @@ async function doLogout() {
 // ── CARREGAR TODOS OS DADOS DO SUPABASE PARA MEMÓRIA ────────
 async function loadFromSupabase() {
   try {
-    const [orcRes, vendRes, estRes, cfgRes] = await Promise.all([
+    const [orcRes, vendRes, estRes, anRes, cfgRes] = await Promise.all([
       sb.from('orcamentos').select('*').order('created_at', { ascending: true }),
       sb.from('vendas').select('*').order('created_at', { ascending: true }),
       sb.from('estoque').select('*').order('created_at', { ascending: true }),
+      sb.from('anuncios').select('*').order('created_at', { ascending: true }),
       sb.from('configuracoes').select('*').single()
     ]);
 
@@ -4063,6 +4076,26 @@ async function loadFromSupabase() {
         comprado: e.peso_total_g,
         atual: e.peso_restante_g,
         custoKg: e.custo_kg
+      }));
+    }
+
+    // Mapear anuncios
+    if (anRes.data) {
+      _mem['anuncios'] = anRes.data.map(a => ({
+        id: a.id,
+        produto: a.produto,
+        sku: a.sku,
+        tempo: a.tempo_h,
+        insumo: a.custo_insumo,
+        embalagem: a.custo_emb,
+        plataforma: a.plataforma,
+        precoManual: a.preco_venda,
+        precoSugerido: a.preco_venda,
+        custo: a.custo_total,
+        gramTotal: a.peso_g,
+        fotoB64: a.foto_b64,
+        estoqueInicial: a.estoque_inicial,
+        descricao: a.descricao
       }));
     }
 
@@ -4154,6 +4187,27 @@ async function sbSaveEstoque(item) {
       custo_kg: item.custoKg
     });
   } catch(e) { console.warn('Erro ao salvar estoque:', e); }
+}
+
+async function sbSaveAnuncio(an) {
+  try {
+    await sb.from('anuncios').upsert({
+      id: an.id,
+      tenant_id: TENANT_ID,
+      produto: an.produto,
+      sku: an.sku || '',
+      tempo_h: an.tempo,
+      custo_insumo: an.insumo,
+      custo_emb: an.embalagem,
+      plataforma: an.plataforma || '',
+      preco_venda: an.precoManual || an.precoSugerido,
+      custo_total: an.custo,
+      peso_g: an.gramTotal,
+      foto_b64: an.fotoB64 || null,
+      estoque_inicial: an.estoqueInicial || 0,
+      descricao: an.descricao || ''
+    });
+  } catch(e) { console.warn('Erro ao salvar anuncio:', e); }
 }
 
 // ── DELETAR DO SUPABASE ───────────────────────────────────────
