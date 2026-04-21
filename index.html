@@ -3127,14 +3127,16 @@ function saveEstoque() {
 
 function renderEstoque() {
   const list = getEstoque().slice().sort((a, b) => {
-    const pctA = a.comprado > 0 ? (a.atual / a.comprado) : 1;
-    const pctB = b.comprado > 0 ? (b.atual / b.comprado) : 1;
+    const pctA = a.atual / 1000;
+    const pctB = b.atual / 1000;
     return pctA - pctB;
   });
   const tbody = document.getElementById('estoque-tbody');
   document.getElementById('estoque-empty').style.display = list.length ? 'none' : 'flex';
   tbody.innerHTML = list.map(e => {
-    const pct = e.comprado > 0 ? Math.round((e.atual/e.comprado)*100) : 0;
+    // Percentual baseado em 1000g como referência (bobina cheia padrão)
+    const base = 1000;
+    const pct = Math.min(100, Math.round((e.atual / base) * 100));
     const barClass = pct < 20 ? 'danger' : pct < 50 ? 'warn' : '';
     const statusClass = pct < 20 ? 'badge-red' : pct < 50 ? 'badge-yellow' : 'badge-green';
     const statusText = pct < 20 ? 'baixo' : pct < 50 ? 'médio' : 'ok';
