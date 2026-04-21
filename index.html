@@ -3913,7 +3913,7 @@ async function sbDeleteEstoque(id) {
   try { await sb.from('estoque').delete().eq('id', id); } catch(e) { console.warn('sbDeleteEstoque:', e); }
 }
 
-function sbSaveOrcamento(orc) {
+async function sbSaveOrcamento(orc) {
   try {
     await sb.from('orcamentos').upsert({
       id: orc.id,
