@@ -321,9 +321,25 @@ window.doResetPassword = function() {
 window.doForgot = function() {
   var email = document.getElementById('forgot-email').value.trim();
   if (!validateEmail(email)) return showErr('forgot-err', 'Informe um e-mail válido.');
-  if (_sb) { _sb.auth.resetPasswordForEmail(email); }
-  showToast('Link enviado! Verifique seu e-mail.', 'success');
-  window.switchAuthTab('login');
+
+  var btn = document.querySelector('#auth-forgot .auth-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
+
+  if (_sb) {
+    _sb.auth.resetPasswordForEmail(email, {
+      redirectTo: 'https://www.criattiva3d.com.br'
+    }).then(function(res) {
+      if (btn) { btn.disabled = false; btn.textContent = 'Enviar link'; }
+      if (res.error) {
+        return showErr('forgot-err', 'Erro ao enviar. Verifique o e-mail e tente novamente.');
+      }
+      showToast('Link enviado! Verifique seu e-mail.', 'success');
+      window.switchAuthTab('login');
+    });
+  } else {
+    if (btn) { btn.disabled = false; btn.textContent = 'Enviar link'; }
+    showErr('forgot-err', 'Erro de conexão. Tente novamente.');
+  }
 };
 
 window.resendVerification = function() { showToast('E-mail reenviado!', 'success'); };
