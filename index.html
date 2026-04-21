@@ -843,54 +843,143 @@ input[type="color"] { padding: 4px 6px; height: 36px; cursor: pointer; }
    RESPONSIVE BREAKPOINTS
    ========================================== */
 
-@media (max-width: 768px) {
-  #mobile-menu-btn { display: flex; }
+/* ==========================================
+   RESPONSIVE - Dashboard + App
+   ========================================== */
 
-  #sidebar {
-    position: fixed; top: 0; left: 0; bottom: 0;
-    width: 220px !important; min-width: 220px !important;
-    transform: translateX(-100%);
-    transition: transform 0.25s ease; z-index: 100;
-  }
-  #sidebar.open { transform: translateX(0); }
-  #sidebar-overlay.open { display: block; }
+/* Desktop base fixes */
+body { overflow: hidden; }
+#main { overflow-y: auto; }
 
-  #main { width: 100%; padding-top: 60px; }
-  .page { padding: 16px 14px; }
-  .page-header { flex-direction: column; gap: 12px; margin-bottom: 16px; }
-  .stat-grid { grid-template-columns: 1fr; gap: 10px; }
-  .dash-grid { grid-template-columns: 1fr; }
-  .form-grid-2, .form-grid-3 { grid-template-columns: 1fr; }
-  .table-wrap { overflow-x: auto; }
-  table { min-width: 500px; }
-  .modal { width: 95vw; margin: 0 auto; max-height: 85vh; }
-  .btn { font-size: 12px; padding: 7px 12px; }
-  .filter-bar { flex-wrap: wrap; }
-  .filter-bar input, .filter-bar select { width: 100%; }
-  .tabs { overflow-x: auto; flex-wrap: nowrap; }
-  .tab { white-space: nowrap; }
-  .stat-value { font-size: 20px; }
-  .detail-panel { width: 100vw; }
-  .fil-picker-box { width: 95vw; }
-  .fil-picker-list { grid-template-columns: 1fr; }
-
-  /* Auth mobile */
-  .auth-box { padding: 28px 24px; border-radius: 16px; }
-  .auth-title { font-size: 19px; }
-  .pix-box { padding: 24px 20px; }
+/* Tablet - 1024px */
+@media (max-width: 1024px) {
+  .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .page { padding: 20px 24px; }
 }
 
-@media (max-width: 480px) {
-  .page-title h2 { font-size: 18px; }
-  .stat-value { font-size: 18px; }
+/* Mobile - 768px */
+@media (max-width: 768px) {
+  body { overflow: auto; flex-direction: column; height: 100%; min-height: 100vh; }
 
-  /* Auth small mobile */
-  .auth-box { padding: 24px 18px; border-radius: 14px; }
-  .auth-title { font-size: 18px; }
+  /* Hamburger */
+  #mobile-menu-btn { display: flex; }
+
+  /* Sidebar drawer */
+  #sidebar {
+    position: fixed; top: 0; left: 0; bottom: 0;
+    width: 240px !important; min-width: 240px !important;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    z-index: 100; height: 100vh;
+  }
+  #sidebar.open { transform: translateX(0); box-shadow: 4px 0 20px rgba(0,0,0,0.5); }
+  #sidebar-overlay.open { display: block; }
+
+  /* Main area */
+  #main { width: 100%; min-height: 100vh; padding-top: 56px; overflow-y: auto; }
+
+  /* Pages */
+  .page { padding: 16px 12px; gap: 12px; }
+  .page-header {
+    flex-direction: column; align-items: flex-start;
+    gap: 10px; margin-bottom: 16px;
+  }
+  .page-header .btn { width: 100%; justify-content: center; }
+  .page-title h2 { font-size: 20px; }
+  .page-title p { font-size: 12px; }
+
+  /* Stats - 1 coluna */
+  .stat-grid { grid-template-columns: 1fr; gap: 10px; margin-bottom: 16px; }
+  .stat-card { padding: 16px; }
+  .stat-value { font-size: 22px; }
+  .stat-sub { font-size: 11px; }
+
+  /* Dashboard grid - 1 coluna */
+  .dash-grid { grid-template-columns: 1fr; gap: 12px; margin-top: 12px; }
+
+  /* Cards */
+  .card { padding: 16px; }
+
+  /* Tables */
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: var(--radius-lg); }
+  table { min-width: 560px; }
+  thead th { padding: 10px 12px; font-size: 10px; }
+  tbody td { padding: 10px 12px; font-size: 12px; }
+
+  /* Buttons */
+  .btn { font-size: 12px; padding: 7px 12px; }
+  .btn-sm { font-size: 11px; padding: 5px 10px; }
+
+  /* Filter bar */
+  .filter-bar { flex-wrap: wrap; gap: 8px; }
+  .filter-bar input, .filter-bar select { width: 100%; flex: 1 1 auto; }
+
+  /* Tabs */
+  .tabs { overflow-x: auto; flex-wrap: nowrap; padding: 3px; }
+  .tab { white-space: nowrap; padding: 7px 12px; font-size: 12px; }
+
+  /* Forms */
+  .form-grid-2, .form-grid-3 { grid-template-columns: 1fr; }
+
+  /* Modal */
+  .modal { width: 96vw; max-width: 96vw; margin: 0 auto; max-height: 88vh; border-radius: 14px; }
+  .modal-header { padding: 16px 18px; }
+  .modal-body { padding: 18px; }
+  .modal-footer { padding: 14px 18px; flex-wrap: wrap; gap: 8px; }
+  .modal-footer .btn { flex: 1; justify-content: center; }
+
+  /* Detail panel */
+  .detail-panel { width: 100vw; border-radius: 0; padding: 16px; }
+  .detail-overlay { align-items: flex-end; }
+
+  /* Filament picker */
+  .fil-picker-box { width: 96vw; }
+  .fil-picker-list { grid-template-columns: 1fr; }
+
+  /* Cost block */
+  .cost-block { padding: 12px; }
+  .cost-row { font-size: 12px; }
+
+  /* Chart bars */
+  .chart-bar-label { width: 70px; font-size: 11px; }
+  .chart-bar-val { font-size: 10px; width: 65px; }
+
+  /* Trial banner */
+  #trial-banner { padding: 8px 12px; font-size: 11px; }
+
+  /* Auth mobile */
+  .auth-box { padding: 28px 22px; border-radius: 16px; }
+  .auth-title { font-size: 19px; }
+  .pix-box { padding: 24px 18px; }
+  .pix-plans { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .pix-plan-price { font-size: 17px; }
+}
+
+/* Small mobile - 480px */
+@media (max-width: 480px) {
+  .page { padding: 12px 10px; }
+  .page-title h2 { font-size: 18px; }
+  .stat-value { font-size: 20px; }
+  .stat-grid { gap: 8px; }
+
+  /* Auth */
+  .auth-box { padding: 22px 16px; border-radius: 14px; }
+  .auth-title { font-size: 17px; }
   .auth-input { font-size: 16px; } /* prevent iOS zoom */
-  .auth-btn { font-size: 15px; }
+  .auth-btn { font-size: 15px; padding: 13px; }
+  .pix-box { padding: 18px 14px; }
   .pix-plans { grid-template-columns: 1fr 1fr; }
-  .pix-box { padding: 20px 16px; }
+  .pix-plan { padding: 10px 6px; }
+  .pix-plan-price { font-size: 16px; }
+  .pix-qr { width: 150px; height: 150px; }
+  .pix-qr img { width: 130px; height: 130px; }
+}
+
+/* Very small - 360px */
+@media (max-width: 360px) {
+  .auth-box { padding: 18px 14px; }
+  .pix-plans { grid-template-columns: 1fr; }
+  .stat-value { font-size: 18px; }
 }
 
 </style>
