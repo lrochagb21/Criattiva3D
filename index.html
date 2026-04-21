@@ -42,7 +42,8 @@ document.addEventListener('DOMContentLoaded', function() {
             email: session.user.email,
             plan: perfil ? perfil.plano : 'trial',
             trialExpires: perfil ? perfil.trial_expira_em : new Date(Date.now() + 7*86400000).toISOString(),
-            assinaturaAtiva: perfil ? perfil.assinatura_ativa : false
+            assinaturaAtiva: perfil ? perfil.assinatura_ativa : false,
+            assinaturaExpira: perfil ? perfil.assinatura_expira : null
           };
           saveAuthLocal(_currentUser);
           enterApp();
@@ -255,7 +256,8 @@ window.doLogin = function() {
               name: perfil ? perfil.nome : email.split('@')[0], email: email,
               plan: perfil ? perfil.plano : 'trial',
               trialExpires: perfil ? perfil.trial_expira_em : new Date(Date.now()+7*86400000).toISOString(),
-              assinaturaAtiva: perfil ? perfil.assinatura_ativa : false };
+              assinaturaAtiva: perfil ? perfil.assinatura_ativa : false,
+              assinaturaExpira: perfil ? perfil.assinatura_expira : null };
             saveAuthLocal(_currentUser);
             if (btn) { btn.disabled = false; btn.textContent = 'Entrar'; }
             enterApp();
@@ -297,6 +299,7 @@ function enterApp() {
   var ui = document.getElementById('user-info');
   if (ui && _currentUser) ui.textContent = _currentUser.email;
   showTrialBanner();
+  showSubscriptionCard();
   // Activate dashboard page
   document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
   document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
@@ -310,6 +313,7 @@ function enterApp() {
     if (typeof renderDashboard === 'function') renderDashboard();
     if (typeof populateMesSelects === 'function') populateMesSelects();
     if (typeof loadFromSupabase === 'function') loadFromSupabase();
+    setTimeout(function() { if (typeof window.showSubscriptionCard === 'function') window.showSubscriptionCard(); }, 1500);
   }, 100);
 }
 
@@ -326,6 +330,48 @@ window.logout = function() {
   var as = document.getElementById('auth-screen');
   if (as) as.classList.add('active');
   window.switchAuthTab('login');
+};
+
+// ========== SUBSCRIPTION CARD ==========
+window.showSubscriptionCard = function() {
+  if (!_currentUser) return;
+  var card = document.getElementById('subscription-card');
+  if (!card) return;
+
+  var plan = _currentUser.plan || 'trial';
+  var planNames = { trial:'Trial Gratuito', mensal:'Mensal', trimestral:'Trimestral', semestral:'Semestral', anual:'Anual' };
+  var planName = planNames[plan] || plan;
+
+  // Determine expiry date
+  var expiraDate = null;
+  if (_currentUser.assinaturaAtiva && _currentUser.assinaturaExpira) {
+    expiraDate = new Date(_currentUser.assinaturaExpira);
+  } else if (plan === 'trial' && _currentUser.trialExpires) {
+    expiraDate = new Date(_currentUser.trialExpires);
+  }
+
+  var diasRestantes = expiraDate ? Math.ceil((expiraDate - new Date()) / 86400000) : null;
+  var expiraStr = expiraDate ? expiraDate.toLocaleDateString('pt-BR') : '—';
+
+  // Color based on days
+  var cor = 'var(--accent)';
+  if (diasRestantes !== null) {
+    if (diasRestantes <= 7) cor = '#ff6b35';
+    else if (diasRestantes <= 30) cor = '#fbbf24';
+  }
+
+  // Status label
+  var statusLabel = _currentUser.assinaturaAtiva ? 'Ativo ✓' : (plan === 'trial' ? 'Trial ativo' : 'Inativo');
+  var statusCor = _currentUser.assinaturaAtiva ? 'var(--accent)' : (plan === 'trial' ? '#fbbf24' : 'var(--danger)');
+
+  document.getElementById('sub-card-plan').textContent = 'Plano ' + planName;
+  document.getElementById('sub-card-status').textContent = statusLabel;
+  document.getElementById('sub-card-status').style.color = statusCor;
+  document.getElementById('sub-card-expira').textContent = expiraStr;
+  document.getElementById('sub-card-dias').textContent = diasRestantes !== null ? diasRestantes + ' dias' : '—';
+  document.getElementById('sub-card-dias').style.color = cor;
+
+  card.style.display = 'flex';
 };
 
 // ========== TRIAL BANNER ==========
@@ -1278,6 +1324,32 @@ body { overflow: hidden; }
       <div class="stat-sub" id="dash-custos-sub"></div>
     </div>
   </div>
+  <!-- SUBSCRIPTION CARD -->
+  <div id="subscription-card" style="display:none; background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius-lg); padding:16px 24px; margin-bottom:20px; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:14px;">
+      <div style="width:40px;height:40px;border-radius:10px;background:rgba(0,229,160,0.1);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">🔐</div>
+      <div>
+        <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;font-weight:600;margin-bottom:2px;">Sua Assinatura</div>
+        <div id="sub-card-plan" style="font-size:15px;font-weight:700;color:var(--text);">Plano —</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:32px;flex-wrap:wrap;">
+      <div style="text-align:center;">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Status</div>
+        <div id="sub-card-status" style="font-size:13px;font-weight:600;color:var(--accent);">Ativo</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Expira em</div>
+        <div id="sub-card-expira" style="font-size:13px;font-weight:600;color:var(--text);">—</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Dias restantes</div>
+        <div id="sub-card-dias" style="font-size:20px;font-weight:800;color:var(--accent);">—</div>
+      </div>
+    </div>
+    <button onclick="openPixModal()" style="background:var(--accent);color:#0d0f14;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:var(--font);">↗ Renovar / Upgrade</button>
+  </div>
+
   <div class="dash-grid">
     <div class="card">
       <div style="font-weight:600;margin-bottom:16px;display:flex;align-items:center;gap:8px">
