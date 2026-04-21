@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Criattiva3D – Gestão de Impressão 3D</title>
+<script src="https://js.hcaptcha.com/1/api.js" async defer></script>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -174,6 +175,15 @@ window.doSignup = function() {
   if (!terms) return showErr('signup-err', 'Você precisa aceitar os Termos de Uso.');
   if (!checkRateLimit('signup', 3, 3600000)) return showErr('signup-err', 'Muitas tentativas. Aguarde uma hora.');
 
+  // Validate hCaptcha
+  var captchaEl = document.querySelector('.h-captcha iframe');
+  var captchaToken = window.hcaptcha ? window.hcaptcha.getResponse() : '';
+  if (!captchaToken) {
+    var cerr = document.getElementById('captcha-err');
+    if (cerr) { cerr.textContent = 'Por favor, complete a verificação de segurança.'; cerr.classList.add('show'); setTimeout(function(){ cerr.classList.remove('show'); }, 5000); }
+    return;
+  }
+
   var fp = getFingerprint();
   var usedEmails = JSON.parse(localStorage.getItem('used_emails') || '[]');
   if (usedEmails.indexOf(email) !== -1) return showErr('signup-err', 'Este e-mail já foi usado para um trial.');
@@ -213,6 +223,7 @@ window.doSignup = function() {
         onSuccess(res.data.user ? res.data.user.id : null);
       }).catch(function(e) {
         if (btn) { btn.disabled = false; btn.textContent = 'Criar conta grátis'; }
+        if (window.hcaptcha) window.hcaptcha.reset();
         showErr('signup-err', 'Erro ao criar conta. Tente novamente.');
       });
   } else {
@@ -795,6 +806,8 @@ input[type="color"] { padding: 4px 6px; height: 36px; cursor: pointer; }
 
 .auth-divider { text-align: center; font-size: 12px; color: var(--muted); margin: 4px 0; }
 
+.h-captcha { display: flex; justify-content: center; margin: 4px 0 2px; }
+.h-captcha iframe { border-radius: 8px; max-width: 100%; }
 .auth-terms-row {
   display: flex; align-items: flex-start; gap: 10px;
   width: 100%; box-sizing: border-box;
@@ -1123,6 +1136,13 @@ body { overflow: hidden; }
             <input type="checkbox" id="signup-terms">
             <span class="auth-terms">Li e aceito os <a href="#">Termos de Uso</a> e a <a href="#">Política de Privacidade</a>. Entendo que meus dados serão usados conforme a LGPD.</span>
           </label>
+          <div class="h-captcha"
+            data-sitekey="d424e78c-67c8-4576-9d2e-7bf8ec20eeec"
+            data-theme="dark"
+            data-size="normal"
+            style="margin: 4px 0;">
+          </div>
+          <div id="captcha-err" class="auth-err"></div>
           <button class="auth-btn" onclick="doSignup()">Criar conta grátis</button>
         </div>
 
